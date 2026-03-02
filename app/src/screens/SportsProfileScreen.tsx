@@ -310,7 +310,7 @@ export default function SportsProfileScreen() {
                                 await AsyncStorage.setItem('userName', resData.name || registrationData.name || '');
                                 await AsyncStorage.setItem('userSports', JSON.stringify(resData.sports || [selectedSport]));
                             }
-                            navigation.navigate('SelectTest');
+                            navigation.navigate('Home');
                         } catch (err: any) {
                             console.error('Registration failed:', err);
                             const msg = err.response?.data?.message || err.message;

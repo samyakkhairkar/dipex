@@ -66,16 +66,7 @@ export default function UploadingDataScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                {/* Network Alert (Simulation) */}
-                <View style={styles.alertBox}>
-                    <MaterialCommunityIcons name="wifi-off" size={24} color="#B45309" style={styles.alertIcon} />
-                    <View style={styles.alertTextContent}>
-                        <Text style={styles.alertTitle}>No Internet Connection</Text>
-                        <Text style={styles.alertSubtitle}>
-                            Upload paused. Data is safely queued for sync when you're back online.
-                        </Text>
-                    </View>
-                </View>
+                {/* Network Alert (Simulation) - Removed as it confused users */}
 
                 {/* Main Illustration */}
                 <View style={styles.illustrationContainer}>

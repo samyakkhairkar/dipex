@@ -38,20 +38,28 @@ exports.registerUser = async (req, res) => {
 
   try {
     if (req.files) {
+      const uploadPromises = [];
+
       if (req.files.profilePhoto && req.files.profilePhoto.length > 0) {
-        const result = await uploadBufferToCloudinary(req.files.profilePhoto[0].buffer, 'dipex/profiles');
-        profilePhotoUrl = result.secure_url;
+        uploadPromises.push(
+          uploadBufferToCloudinary(req.files.profilePhoto[0].buffer, 'dipex/profiles')
+            .then(result => { profilePhotoUrl = result.secure_url; })
+        );
       }
       if (req.files.aadhaarCard && req.files.aadhaarCard.length > 0) {
-        const result = await uploadBufferToCloudinary(req.files.aadhaarCard[0].buffer, 'dipex/documents');
-        aadhaarCardUrl = result.secure_url;
+        uploadPromises.push(
+          uploadBufferToCloudinary(req.files.aadhaarCard[0].buffer, 'dipex/documents')
+            .then(result => { aadhaarCardUrl = result.secure_url; })
+        );
       }
       if (req.files.dobCertificate && req.files.dobCertificate.length > 0) {
-        const result = await uploadBufferToCloudinary(req.files.dobCertificate[0].buffer, 'dipex/documents');
-        dobCertificateUrl = result.secure_url;
+        uploadPromises.push(
+          uploadBufferToCloudinary(req.files.dobCertificate[0].buffer, 'dipex/documents')
+            .then(result => { dobCertificateUrl = result.secure_url; })
+        );
       }
       if (req.files.competitionVideo && req.files.competitionVideo.length > 0) {
-        const videoResult = await new Promise((resolve, reject) => {
+        const videoPromise = new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
                 { resource_type: 'video', folder: 'dipex/videos' },
                 (err, res) => {
@@ -60,9 +68,11 @@ exports.registerUser = async (req, res) => {
                 }
             );
             stream.end(req.files.competitionVideo[0].buffer);
-        });
-        competitionVideoUrl = videoResult.secure_url;
+        }).then(result => { competitionVideoUrl = result.secure_url; });
+        uploadPromises.push(videoPromise);
       }
+      
+      await Promise.all(uploadPromises);
     }
     if (role === 'admin') {
       const adminExists = await Admin.findOne({ email });
@@ -118,8 +128,12 @@ exports.loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Check in Admin collection first
-    const admin = await Admin.findOne({ email });
+    // Run Admin and User queries concurrently
+    const [admin, user] = await Promise.all([
+      Admin.findOne({ email }),
+      User.findOne({ email })
+    ]);
+
     if (admin && (await admin.matchPassword(password))) {
       return res.json({
         _id: admin.id, name: admin.name, email: admin.email, role: admin.role, sports: admin.sports,
@@ -127,17 +141,15 @@ exports.loginUser = async (req, res) => {
       });
     }
 
-    // Check in User collection next
-    const user = await User.findOne({ email });
-
     if (user && (await user.matchPassword(password))) {
-      res.json({
+      return res.json({
         _id: user.id, name: user.name, email: user.email, role: user.role,
         token: generateToken(user.id),
       });
-    } else {
-      res.status(401).json({ message: 'Invalid email or password' });
     }
+
+    // Neither admin nor user matched
+    res.status(401).json({ message: 'Invalid email or password' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
